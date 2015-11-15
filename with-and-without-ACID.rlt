@@ -1,0 +1,74 @@
+#lang racket/base
+
+(require racket/contract
+         (prefix-in control: "control-DAL.rkt")
+         (prefix-in trans: "transact-DAL.rkt" )
+         (prefix-in fail: "failure.rkt")
+         "ado-constants.rkt"
+         "tll-common.rkt")
+
+(provide with-ACID
+         w/o-ACID
+         no-ACID)
+
+#|
+
+Functionalizes ACID using scheme's dynamic-wind form
+
+handle is allocated and released in pre- and post-ludes of dynamic wind
+starts and commits/Rollbacks in a transaction
+opt-lock and body thunk are within the context of a named transaction
+throws an error, or returns the value of body-thunk
+ anything which mutates state machine should use with-ACID
+
+|#
+
+(define/contract (with-ACID #:id identifier  #:opt-lock-thunk opt-lock-thunk #:body-thunk body-thunk)
+   (->  #:id string? #:opt-lock-thunk (-> handle/c any) #:body-thunk (-> handle/c any) any)
+   (let ((identifier (proc-identifier identifier))
+         (h null))
+     (dynamic-wind (λ _ (set! h (control:get-conn-handle)))
+                   (λ _ (with-handlers  ([my-exn (lambda (exn)  ;exn:fail?
+                                                   (fail:finally 
+                                                    (trans:transact h ROLLBACK identifier))
+                                                   (raise (exn:fail (format "~A\n" (exn-message exn)) (current-continuation-marks))))])
+                          (trans:transact h BEGIN identifier)
+                          (opt-lock-thunk h)
+                          (begin0 (body-thunk h)
+                                  (trans:transact h COMMIT identifier))))
+                   (λ _ (fail:finally  (control:release-conn-handle h))))))
+ 
+; No transactions, no optimistic locking. Just provides error propagation and connection pooling
+;
+;1. error propagation
+;2. use of connection pool
+;
+; anything called using w/o-ACID must be a function that does not mutate the state of the RDBMS
+
+(define/contract (w/o-ACID #:id identifier  #:body-thunk body-thunk)
+   (->  #:id string? #:body-thunk (-> handle/c any) any)
+   (let ((identifier (proc-identifier identifier))
+         (h null))
+     (dynamic-wind (λ _ (set! h (control:get-conn-handle)))
+                   (λ _ (with-handlers  ([my-exn (lambda (exn)  ;exn:fail?
+                                                   (raise (exn:fail (format "~A\n" (exn-message exn)) (current-continuation-marks))))])
+                          (body-thunk h)))
+                   (λ _ (fail:finally (control:release-conn-handle h))))))
+
+
+
+;doesn't invoke a connection, thereby tie-ing up a state machine/connection
+;used in general for the report-pdf functions
+(define/contract (no-ACID #:id identifier  #:body-thunk body-thunk)
+   (->  #:id string? #:body-thunk (-> any) any)
+   (let ((identifier (proc-identifier identifier)))
+     (dynamic-wind  void
+                   (λ _ (with-handlers  ([my-exn (lambda (exn)  ;exn:fail?
+                                                   (raise (exn:fail (format "~A\n" (exn-message exn)) (current-continuation-marks))))])
+                          (body-thunk)))
+                   void)))
+ 
+
+ 
+(define (proc-identifier fn-name)
+         (string-append "TLL-OPT" "." fn-name))
