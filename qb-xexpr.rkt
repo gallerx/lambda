@@ -11,7 +11,7 @@ a wide variety of message types
 
 -Follows QB's xml naming convention of <object><action>, i.e. customer-add
 
-Such xexprs are converted to xml in module messages.rkt
+Such xexprs are converted to xml in module qb-xml.rkt
 
 All exported functions in this module are (-> integer? xexpr?), where integer? is the request-id
 that a wrapper function will provide just before request transmission.
