@@ -12,14 +12,21 @@
          no-ACID)
 
 #|
+Functionalizes ACID using scheme/racket's dynamic-wind form
 
-Functionalizes ACID using scheme's dynamic-wind form
+;KEY FEATURES:
+1. error propagation
+2. use of connection pool
+3. transactions 
+4. optimistic locking 
 
-handle is allocated and released in pre- and post-ludes of dynamic wind
-starts and commits/Rollbacks in a transaction
-opt-lock and body thunk are within the context of a named transaction
-throws an error, or returns the value of body-thunk
- anything which mutates state machine should use with-ACID
+; handle is allocated and released in pre- and post-ludes of dynamic wind
+; starts and commits/Rollbacks a transaction
+;opt lock and body thunk are within the context of a named transaction
+;throws an error, or returns the value of body-thunk
+
+;anything which mutates state machine should use with-ACID
+
 
 |#
 
@@ -38,20 +45,24 @@ throws an error, or returns the value of body-thunk
                                   (trans:transact h COMMIT identifier))))
                    (λ _ (fail:finally  (control:release-conn-handle h))))))
  
-; No transactions, no optimistic locking. Just provides error propagation and connection pooling
-;
-;1. error propagation
-;2. use of connection pool
-;
-; anything called using w/o-ACID must be a function that does not mutate the state of the RDBMS
 
+#| 
+ No transactions, no optimistic locking. Just provides 
+
+1. error propagation
+2. use of connection pool
+
+without-ACID <- will not mutate RDBMS(s) AND does not need locking (even read locking for a read)
+
+|#
 (define/contract (w/o-ACID #:id identifier  #:body-thunk body-thunk)
    (->  #:id string? #:body-thunk (-> handle/c any) any)
    (let ((identifier (proc-identifier identifier))
          (h null))
      (dynamic-wind (λ _ (set! h (control:get-conn-handle)))
                    (λ _ (with-handlers  ([my-exn (lambda (exn)  ;exn:fail?
-                                                   (raise (exn:fail (format "~A\n" (exn-message exn)) (current-continuation-marks))))])
+                                                   (raise (exn:fail (format "~A\n" (exn-message exn))
+                                                                    (current-continuation-marks))))])
                           (body-thunk h)))
                    (λ _ (fail:finally (control:release-conn-handle h))))))
 
@@ -64,7 +75,8 @@ throws an error, or returns the value of body-thunk
    (let ((identifier (proc-identifier identifier)))
      (dynamic-wind  void
                    (λ _ (with-handlers  ([my-exn (lambda (exn)  ;exn:fail?
-                                                   (raise (exn:fail (format "~A\n" (exn-message exn)) (current-continuation-marks))))])
+                                                   (raise (exn:fail (format "~A\n" (exn-message exn))
+                                                                    (current-continuation-marks))))])
                           (body-thunk)))
                    void)))
  
