@@ -1,8 +1,8 @@
 #lang racket/base
 
 #|-----------------------------------------------------------------------------------------
-Functional Assertions raise an exception if their conditions aren't met. Otherwise they return
-the value under test.
+Functional Assertions raise an exception if test-condition isn't met. Otherwise equivalent
+to the idendity function Ix = x 
 
 use prefix A/ when requiring this  module. 
 
