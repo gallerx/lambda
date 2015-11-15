@@ -74,7 +74,7 @@ If using Microsoft's SSRS, demangle your pdf-bytes before sending!
                   "\r\n\r\n"
                   "Attached please find your results."
                   "\r\n\r\n"
-                  "We sincerely appreciate this opportunity to be of service. If you have any further questions concerning this test or its results, " 
+                  "We sincerely appreciate this opportunity to be of service. If you have any further questions, "
                   "please feel free to contact us at any time."
                   "\r\n\r\n\r\n"
                   "Yours truly,"
