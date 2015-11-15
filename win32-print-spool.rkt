@@ -31,7 +31,6 @@ _pointer types work great with byte buffers
 
 |#
 
-
 (provide file->print-spool
          bytes->print-spool)
 
@@ -39,12 +38,10 @@ _pointer types work great with byte buffers
          racket/path
          racket/port
          racket/file
-         "../../../framebert/flying-web-server/total-function-layer/TLL/anaphora.rkt"
-         (prefix-in fail: "../../../framebert/flying-web-server/total-function-layer/control/failure.rkt")
-         (prefix-in A/ "../../../framebert/flying-web-server/total-function-layer/control/assert.rkt"))
+         "anaphora.rkt"
+         (prefix-in fail: "failure.rkt")
+         (prefix-in A/ "assert.rkt"))
          
-
-
 (define kernel (ffi-lib "kernel32.dll"))
 (define winspool (ffi-lib "winspool.drv"))
 
